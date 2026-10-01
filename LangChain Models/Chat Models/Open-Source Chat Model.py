@@ -24,10 +24,7 @@ def chat_model(
         temperature=temperature,
         max_new_tokens=2048, # resoning + response
 
-        huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
-        model_kwargs={
-
-        }
+        huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN")
     )
 
     # Wrap it in ChatHuggingFace and enable thinking

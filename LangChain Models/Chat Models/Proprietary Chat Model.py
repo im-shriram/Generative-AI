@@ -1,44 +1,41 @@
 # Importing necessary libraries
 from typing import Any
-import langchain_groq.chat_models
-from langchain_core.messages.ai import AIMessage
-from langchain_groq import ChatGroq
 import pathlib
 import os
 from dotenv import load_dotenv
 
+from langchain_core.messages.ai import AIMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+
 
 def large_language_model(
-    model_name: str="openai/gpt-oss-120b",
+    model_name: str="gemini-3-flash-preview",
     temperature: float=1
-) -> langchain_groq.chat_models.ChatGroq:
-    llm = ChatGroq(
+) -> ChatGoogleGenerativeAI:
+    chat_model = ChatGoogleGenerativeAI(
         model=model_name,
-        temperature=temperature, # recommended for reasoning phase
-
-        max_tokens=2048, # Context Window (Reasoning + Response): 2048, None - no limit
-        reasoning_effort="high",
-        reasoning_format="parsed", # Crucial for accessing thinking content 
-
-        api_key=os.getenv("GROQ_API_TOKEN"),
-        timeout=None, # The timeout for API requests in seconds. None uses the default
-        max_retries=2, # Maximum number of retries for a failed request. Default is 2
+        api_key=os.getenv("GOOGLE_API_KEY"),
+        temperature=temperature,
+        max_tokens=2048,
+        thinking_level="low", # For Gemini 3: 'minimal', 'low', 'medium', 'high'
+        include_thoughts=True, # REQUIRED to see the reasoning in the output
     )
 
-    return llm
+    return chat_model
 
 def generate_response(
-    llm: langchain_groq.chat_models.ChatGroq,
+    chat_model: ChatGoogleGenerativeAI,
     query: str = "Hello, How are you today?"
 ) -> tuple[Any, str, str]:
-    response_dict: AIMessage = llm.invoke(input=query)
+    response_dict: AIMessage = chat_model.invoke(
+        input=query,
+        automatic_function_calling={"disable": True}
+    )
 
-    content: str = response_dict.content
-    reasoning: Any | None = response_dict.additional_kwargs.get("reasoning_content")
+    content: str = response_dict.content[1]["text"]
+    reasoning: str = response_dict.content[0]["thinking"]
 
-    if reasoning:
-        return response_dict, content, reasoning
-    return response_dict, content
+    return response_dict, content, reasoning
 
 
 def main() -> None:
@@ -47,11 +44,11 @@ def main() -> None:
     load_dotenv(dotenv_path=parent_path / ".env")
 
     # Building model instance
-    llm: langchain_groq.chat_models.ChatGroq = large_language_model(model_name="openai/gpt-oss-120b", temperature=1)
+    chat_model: ChatGoogleGenerativeAI = large_language_model(model_name="gemini-3-flash-preview", temperature=1)
 
     # Generating response
     query: str = "What is the difference between `Generative AI` and `Agentic AI`?"
-    response_dict, content, reasoning = generate_response(llm=llm, query=query)
+    response_dict, content, reasoning = generate_response(chat_model=chat_model, query=query)
 
     print(f"Response: {content}", end="\n\n")
     print(f"Reasioning Content: {reasoning}")
