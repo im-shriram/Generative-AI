@@ -1,0 +1,60 @@
+{
+    "lc": 1,
+    "type": "constructor",
+    "id": [
+        "langchain",
+        "prompts",
+        "chat",
+        "ChatPromptTemplate"
+    ],
+    "kwargs": {
+        "input_variables": [
+            "previous_chat_history"
+        ],
+        "messages": [
+            {
+                "lc": 1,
+                "type": "constructor",
+                "id": [
+                    "langchain",
+                    "prompts",
+                    "chat",
+                    "SystemMessagePromptTemplate"
+                ],
+                "kwargs": {
+                    "prompt": {
+                        "lc": 1,
+                        "type": "constructor",
+                        "id": [
+                            "langchain",
+                            "prompts",
+                            "prompt",
+                            "PromptTemplate"
+                        ],
+                        "kwargs": {
+                            "input_variables": [],
+                            "template": "Provide a detailed response to the user query's throughout conversation using only the information from the provided context along with each query. Also consider the previous conversations (the questions user have asked and response you have given) and use it to provide the answer if relevent to the current query. If the context does not contain sufficient information to answer the question, reply exactly with: 'Sorry, I don't have enough information to answer your question.",
+                            "template_format": "f-string"
+                        },
+                        "name": "PromptTemplate"
+                    }
+                }
+            },
+            {
+                "lc": 1,
+                "type": "constructor",
+                "id": [
+                    "langchain",
+                    "prompts",
+                    "chat",
+                    "MessagesPlaceholder"
+                ],
+                "kwargs": {
+                    "variable_name": "previous_chat_history"
+                }
+            }
+        ],
+        "validate_template": true
+    },
+    "name": "ChatPromptTemplate"
+}
