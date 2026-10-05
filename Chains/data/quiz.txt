@@ -1,0 +1,127 @@
+**Transformer Quiz – 5 Questions**  
+
+---
+
+### Theory (Short‑answer / Multiple‑choice)
+
+1. **Self‑Attention vs. Cross‑Attention**  
+   *Explain the difference between self‑attention and cross‑attention in a Transformer. In which part of the architecture is each used?*  
+
+2. **Positional Information**  
+   Why are positional encodings necessary in a Transformer model? Briefly describe two common ways to generate them.  
+
+3. **Model Variants**  
+   Match each Transformer variant with its primary use‑case:  
+
+   | Variant | Typical Pre‑training Objective | Primary Application |
+   |---------|-------------------------------|----------------------|
+   | **BERT** | | |
+   | **GPT** | | |
+   | **T5** | | |
+
+   *(Fill in the missing entries.)*  
+
+---
+
+### Coding (Python – fill‑in‑the‑blank / short implementation)
+
+4. **Scaled Dot‑Product Attention**  
+   Complete the function below that computes the scaled dot‑product attention for a single head. Assume `Q`, `K`, `V` are tensors of shape `(seq_len, d_k)` and `mask` is an optional additive mask (e.g., `‑inf` for masked positions).
+
+   ```python
+   import torch
+   import torch.nn.functional as F
+
+   def scaled_dot_product_attention(Q, K, V, mask=None):
+       """
+       Q, K, V: (seq_len, d_k)
+       mask: (seq_len, seq_len) or None
+       Returns: (seq_len, d_v) – the attended values
+       """
+       d_k = Q.size(-1)
+       # 1️⃣ Compute raw scores
+       scores = _____________________________   # <-- fill in
+
+       # 2️⃣ Scale
+       scores = scores / ______________________   # <-- fill in
+
+       # 3️⃣ Apply mask (if provided)
+       if mask is not None:
+           scores = scores + mask
+
+       # 4️⃣ Softmax to obtain attention weights
+       attn_weights = F.softmax(scores, dim=-1)
+
+       # 5️⃣ Weighted sum of values
+       output = torch.matmul(attn_weights, V)
+       return output
+   ```
+
+5. **Multi‑Head Wrapper**  
+   Write a minimal PyTorch `nn.Module` called `MultiHeadSelfAttention` that:
+
+   * splits the input `x` (shape `(batch, seq_len, d_model)`) into `n_heads` heads,  
+   * applies the `scaled_dot_product_attention` from the previous question to each head,  
+   * concatenates the heads back together, and  
+   * projects the result with a final linear layer (`W_O`).  
+
+   You may assume the helper function `scaled_dot_product_attention` is already defined.
+
+   ```python
+   import torch
+   import torch.nn as nn
+
+   class MultiHeadSelfAttention(nn.Module):
+       def __init__(self, d_model, n_heads):
+           super().__init__()
+           assert d_model % n_heads == 0, "d_model must be divisible by n_heads"
+           self.d_model = d_model
+           self.n_heads = n_heads
+           self.d_head = d_model // n_heads
+
+           # Linear projections for Q, K, V
+           self.W_Q = nn.Linear(d_model, d_model)
+           self.W_K = nn.Linear(d_model, d_model)
+           self.W_V = nn.Linear(d_model, d_model)
+
+           # Output projection
+           self.W_O = nn.Linear(d_model, d_model)
+
+       def forward(self, x, mask=None):
+           """
+           x: (batch, seq_len, d_model)
+           mask: (batch, seq_len, seq_len) or None
+           """
+           batch, seq_len, _ = x.size()
+
+           # 1️⃣ Project to Q, K, V
+           Q = self.W_Q(x)   # (batch, seq_len, d_model)
+           K = self.W_K(x)
+           V = self.W_V(x)
+
+           # 2️⃣ Reshape for multi‑head: (batch, n_heads, seq_len, d_head)
+           Q = Q.view(batch, seq_len, self.n_heads, self.d_head).transpose(1, 2)
+           K = K.view(batch, seq_len, self.n_heads, self.d_head).transpose(1, 2)
+           V = V.view(batch, seq_len, self.n_heads, self.d_head).transpose(1, 2)
+
+           # 3️⃣ Apply attention head‑wise
+           # Hint: you can loop over heads or reshape to combine batch & heads
+           # --------------------------------------------------------------
+           # YOUR CODE HERE – compute `head_outputs`
+           # --------------------------------------------------------------
+
+           # 4️⃣ Concatenate heads → (batch, seq_len, d_model)
+           # --------------------------------------------------------------
+           # YOUR CODE HERE – reshape `head_outputs` back
+           # --------------------------------------------------------------
+
+           # 5️⃣ Final linear projection
+           out = self.W_O(concat)   # (batch, seq_len, d_model)
+           return out
+   ```
+
+   *Fill in the two “YOUR CODE HERE” sections.*  
+
+---
+
+**Optional: Answer Key** (provided separately if you’d like to check your responses).
