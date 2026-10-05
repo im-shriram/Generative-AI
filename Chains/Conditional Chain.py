@@ -54,8 +54,10 @@ model: ChatGoogleGenerativeAI = ChatGoogleGenerativeAI(
     model="gemini-3-flash-preview",
     api_key=os.getenv("GOOGLE_API_KEY"),
     temperature=0.5,
-    max_output_tokens=2048,
-    disable_streaming=False
+    max_output_tokens=2048
+)
+model = model.bind(
+    automatic_function_calling={"disable": True}
 )
 
 sequential_chain: RunnableAssign = RunnablePassthrough.assign(
