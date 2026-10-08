@@ -1,21 +1,16 @@
 import os
 import pathlib
 from dotenv import load_dotenv
+load_dotenv(dotenv_path=pathlib.Path(__file__).parent.parent / ".env")
 
-import pydantic.main
 from pydantic import BaseModel
 from typing import Any
 
 from langchain_core.prompt_values import PromptValue
 from langchain_core.runnables.base import Runnable
-from langchain_groq.chat_models import LanguageModelInput
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
-# Loading environment variables
-load_dotenv(dotenv_path=pathlib.Path(__file__).parent / ".env")
-
-# Defininf Model
 model = ChatGroq(
     model="openai/gpt-oss-120b",
     temperature=0,
@@ -24,7 +19,7 @@ model = ChatGroq(
     max_tokens=None,
     timeout=None,
     max_retries=2,
-)
+) # Only use models that are able to generate strunctured output
 
 json_schema = {
     "title": "Review",
@@ -82,9 +77,13 @@ json_schema = {
         "summary",
         "sentiment"
     ]
-} # json format also provide data validation
+}
 
-structured_model: Runnable[LanguageModelInput, pydantic.main.BaseModel | dict[Any, Any]] = model.with_structured_output(schema=json_schema, method='json_schema')
+structured_model: Runnable = model.with_structured_output(
+    schema=json_schema, 
+    method='json_schema', # "json_mode" is only of your prompt contains "json" string
+    include_raw=True
+)
 
 template = ChatPromptTemplate(
     messages = [
@@ -119,4 +118,4 @@ result: BaseModel | dict[Any, Any] = structured_model.invoke(
     input=prompt
 )
 
-print(result)
+print(result["raw"], result["parsed"], result["parsing_error"], sep="\n\n")

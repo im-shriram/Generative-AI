@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import pathlib
+load_dotenv(dotenv_path=pathlib.Path(__file__).parent.parent / ".env")
 
 from pydantic.main import BaseModel
 from typing import (
@@ -13,14 +14,9 @@ from typing import (
 
 from langchain_core.prompt_values import PromptValue
 from langchain_core.runnables.base import Runnable
-from langchain_groq.chat_models import LanguageModelInput
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
-# Loading environment variables
-load_dotenv(dotenv_path=pathlib.Path(__file__).parent / ".env")
-
-# Defininf Model
 model = ChatGroq(
     model="openai/gpt-oss-120b",
     temperature=0,
@@ -31,11 +27,9 @@ model = ChatGroq(
     max_retries=2,
 )
 
-# Defining output schema
+# NOTE: TypedDict schema is completely optional. If you store a value having a datatype other than specified in schema then python neither throw an error nor give us a warning rather it allows to store that literal - No validation present.
 class Review(TypedDict):
-    """
-        TypedDict schema is completely optional. If you store a value having a datatype other than specified in schema then python neither throw an error nor give us a warning rather it allows to store that literal - No validation present.
-    """
+    """ A class inherited from TypedDict which is a defination of response schema the LLM is going to generate """
 
     key_themes: Annotated[list[str], "Write down all the key themes discussed in the review in a list"]
     summary: Annotated[str, "A brief summary of the review"]
@@ -45,7 +39,11 @@ class Review(TypedDict):
     name: Annotated[Optional[str], "Write the name of the reviewer"]
     
 
-structured_model: Runnable[LanguageModelInput, BaseModel | dict[Any, Any]] = model.with_structured_output(schema=Review) 
+structured_model: Runnable = model.with_structured_output(
+    schema=Review,
+    method="function_calling", # tool-call
+    include_raw=True # The final output is always a dict with keys 'raw', 'parsed', and 'parsing_error'.
+) 
 
 template = ChatPromptTemplate(
     messages = [
@@ -80,4 +78,4 @@ result: BaseModel | dict[Any, Any] = structured_model.invoke(
     input=prompt
 )
 
-print(result)
+print(result["raw"], result["parsed"], result["parsing_error"], sep="\n\n")
