@@ -1,13 +1,13 @@
+from langchain_core.runnables import RunnableSerializable
 import os
 import pathlib
 from dotenv import load_dotenv
 
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
-from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableParallel
-
 
 def load_docs(path: pathlib.Path) -> str:
     with open(file=path, mode='r') as fp:
@@ -15,21 +15,18 @@ def load_docs(path: pathlib.Path) -> str:
         return notes
 
 def generate_template() -> tuple[PromptTemplate, PromptTemplate, PromptTemplate]:
-    # First template for generating text notes
     text_notes_template = PromptTemplate(
         template="Please create text-only notes regarding {topic}, incorporating information from the provided document content - {content}.",
         validate_template=True,
         input_variables=["topic", "content"]
     )
 
-    # Second template for generating code notes
     code_notes_template = PromptTemplate(
         template="Please create code-only notes regarding {topic}, incorporating information from the provided document content - {content}.",
         validate_template=True,
         input_variables=["topic", "content"]
     )
 
-    # Final template for generating quiz
     quiz_template = PromptTemplate(
         template="Based on the provided text notes - {text_notes} and code notes - {code_notes}, create a 5-question quiz consisting of 3 theory questions and 2 coding questions.",
         validate_template=True,
@@ -38,18 +35,16 @@ def generate_template() -> tuple[PromptTemplate, PromptTemplate, PromptTemplate]
 
     return text_notes_template, code_notes_template, quiz_template
 
-def models() -> tuple[ChatHuggingFace, ChatGroq]:
-    # Text generation model
-    llm = HuggingFaceEndpoint(
-        model="Qwen/Qwen3-8B",
-        task="text-generation",
-        provider="nscale",
-        max_new_tokens=5000,
-        temperature=0.5,
-        huggingfacehub_api_token=os.getenv("HUGGINGFACEHUB_API_TOKEN"),
-    ); text_model = ChatHuggingFace(llm=llm)
+def models() -> tuple[ChatGoogleGenerativeAI, ChatGroq]:
+    text_model: ChatGoogleGenerativeAI = ChatGoogleGenerativeAI(
+        model="gemini-3-flash-preview",
+        temperature=1.0,
+        max_tokens=None,
+        reasoning_effort="low",
+        include_thoughts=True,
+        api_key=os.getenv(key="GOOGLE_API_KEY"),
+    )
 
-    # Code and Quiz generation model
     code_quiz_model = ChatGroq(
         model="openai/gpt-oss-120b",
         temperature=0,
@@ -65,10 +60,10 @@ def output_parsers() -> StrOutputParser:
     return string_output_parser
 
 def chains(text_notes_template, code_notes_template, quiz_template, text_model, code_quiz_model, string_output_parser) -> tuple:
-    text_chain = text_notes_template | text_model | string_output_parser
-    code_chain = code_notes_template | code_quiz_model | string_output_parser
+    text_chain: RunnableSerializable = text_notes_template | text_model | string_output_parser
+    code_chain: RunnableSerializable = code_notes_template | code_quiz_model | string_output_parser
 
-    parallel_chain = RunnableParallel({
+    parallel_chain: RunnableParallel = RunnableParallel({
         "text_notes": text_chain,
         "code_notes": code_chain
         # NOTE: The names "text_notes" and "code_notes" must match the variable requirements in prompt template 3
@@ -86,42 +81,30 @@ def chains(text_notes_template, code_notes_template, quiz_template, text_model, 
 
     return text_chain, code_chain, parallel_chain, merge_chain, chain
 
-
 def main():
-    print("Loading Environment Variables")
     parent_path: pathlib.Path = pathlib.Path(__file__).parent
-    load_dotenv(dotenv_path=parent_path / ".env")
+    load_dotenv(dotenv_path=parent_path.parent / ".env")
 
-    print("Loading user document")
     document_path: pathlib.Path = parent_path / "data" / "notes.txt"
     notes: str = load_docs(path=document_path)
 
-    print("Creating prompt templates")
     text_notes_template, code_notes_template, quiz_template = generate_template()
-
-    print("Initializing models")
     text_model, code_quiz_model = models()
-
-    print("Defining output parser")
     string_output_parser: StrOutputParser = output_parsers()
 
-    print("Building chains")
     text_chain, code_chain, parallel_chain, merge_chain, chain = chains(text_notes_template, code_notes_template, quiz_template, text_model, code_quiz_model, string_output_parser)
 
-    print("Getting Response")
     quiz = chain.invoke(input={
         "topic": "Transformers",
         "content": notes
-        # NOTE: No need to pass "text_notes", "code_notes" as they automatically passed via chains
+        # NOTE: No need to pass "text_notes", "code_notes" as they automatically get passed via chains, since parallel chain return dictonary
     }); print(quiz)
 
-    print("Storing quiz into document")
     quiz_doc_path: pathlib.Path = parent_path / "data" / "quiz.txt"
     with open(file=quiz_doc_path, mode='w') as fp:
         fp.write(quiz)
 
     print("Task Completed")
-
 
 if __name__ == "__main__":
     main()

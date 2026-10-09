@@ -2,7 +2,7 @@ from typing import Any
 import os
 import pathlib
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=pathlib.Path(__file__).parent.parent / ".env")
+load_dotenv(dotenv_path=pathlib.Path(__file__).parent.parent.parent / ".env")
 
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
@@ -33,6 +33,4 @@ chain: RunnableParallel = RunnableParallel({
 
 result: dict[str, Any] = chain.invoke(input={
     'topic':'AI'
-})
-
-print(result, end="\n\n")
+}); print(result)

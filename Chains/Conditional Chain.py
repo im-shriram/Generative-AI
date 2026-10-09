@@ -3,7 +3,7 @@ from langchain_core.runnables import RunnableSerializable
 import os
 import pathlib
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=pathlib.Path(__file__).parent / ".env")
+load_dotenv(dotenv_path=pathlib.Path(__file__).parent.parent / ".env")
 
 from pydantic import BaseModel, Field
 from typing import Literal
@@ -16,6 +16,7 @@ from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePas
 class Schema(BaseModel):
     """ A pydantic schema class through which LLMs can generate the structured output """
     sentiment: Literal["positive", "negative", "neutral"] = Field(description="Return sentiment of the review either negative, positive or neutral")
+
 sentiment_output_parser: PydanticOutputParser = PydanticOutputParser(pydantic_object=Schema)
 response_output_parser: StrOutputParser = StrOutputParser()
 
@@ -31,6 +32,7 @@ sentiment_template: PromptTemplate = PromptTemplate(
     },
     validate_template=True
 )
+
 positive_response_template: PromptTemplate = PromptTemplate(
     template="""
         Product Review: {review}
@@ -40,6 +42,7 @@ positive_response_template: PromptTemplate = PromptTemplate(
     input_variables=["review", "sentiment"],
     validate_template=True
 )
+
 negative_response_template: PromptTemplate = PromptTemplate(
     template="""
         Product Review: {review}
@@ -62,13 +65,14 @@ model = model.bind(
 
 sequential_chain: RunnableAssign = RunnablePassthrough.assign(
     sentiment = sentiment_template | model | sentiment_output_parser
-)
+) # This chain via .assign function returns dict{"review": ..., "sentiment": output of sequential chain}
 conditional_chain: RunnableBranch = RunnableBranch(
     (lambda review: review["sentiment"].sentiment == "positive", positive_response_template | model | response_output_parser),
     (lambda review: review["sentiment"].sentiment == "negative", negative_response_template | model | response_output_parser),
     RunnableLambda(lambda review: "The sentiment of review is neutral")
-)
+) # NOTE: lambda review: review["sentiment"].sentiment == "positive" → This syntex is also used when the previous chain of RB is parallel chain, since RP returns dictonary
 system_chain: RunnableSerializable = sequential_chain | conditional_chain
+
 response = system_chain.invoke(
     input={
         "review": """
@@ -80,4 +84,5 @@ response = system_chain.invoke(
         """
     }
 )
+
 print(response)

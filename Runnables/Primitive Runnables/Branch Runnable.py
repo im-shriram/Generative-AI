@@ -3,7 +3,7 @@ from langchain_core.runnables import RunnableSerializable
 import os
 import pathlib
 from dotenv import load_dotenv
-load_dotenv(dotenv_path=pathlib.Path(__file__).parent.parent / ".env")
+load_dotenv(dotenv_path=pathlib.Path(__file__).parent.parent.parent / ".env")
 
 from pydantic import BaseModel, Field
 from typing import Literal
